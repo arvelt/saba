@@ -30,6 +30,20 @@ namespace saba
 			const glm::mat4 invZ = glm::scale(glm::mat4(1), glm::vec3(1, 1, -1));
 			return invZ * m * invZ;
 		}
+
+		// PMX/PMD の回転 (x=pitch, y=yaw, z=roll) を剛体と同じ YXZ 合成 (Ry * Rx * Rz) で行列にする。
+		// ジョイントにも剛体と同じ順序を使う (Issue #49)。
+		btMatrix3x3 EulerYXZ(const glm::vec3& r)
+		{
+			const glm::mat4 rx = glm::rotate(glm::mat4(1), r.x, glm::vec3(1, 0, 0));
+			const glm::mat4 ry = glm::rotate(glm::mat4(1), r.y, glm::vec3(0, 1, 0));
+			const glm::mat4 rz = glm::rotate(glm::mat4(1), r.z, glm::vec3(0, 0, 1));
+			const glm::mat4 m = ry * rx * rz;
+			return btMatrix3x3(
+				m[0][0], m[1][0], m[2][0],
+				m[0][1], m[1][1], m[2][1],
+				m[0][2], m[1][2], m[2][2]);
+		}
 	}
 
 	struct MMDFilterCallback : public btOverlapFilterCallback
@@ -736,7 +750,7 @@ namespace saba
 		Destroy();
 
 		btMatrix3x3 rotMat;
-		rotMat.setEulerZYX(pmdJoint.m_jointRot.x, pmdJoint.m_jointRot.y, pmdJoint.m_jointRot.z);
+		rotMat = EulerYXZ(glm::vec3(pmdJoint.m_jointRot.x, pmdJoint.m_jointRot.y, pmdJoint.m_jointRot.z));
 
 		btTransform transform;
 		transform.setIdentity();
@@ -821,7 +835,7 @@ namespace saba
 		Destroy();
 
 		btMatrix3x3 rotMat;
-		rotMat.setEulerZYX(pmxJoint.m_rotate.x, pmxJoint.m_rotate.y, pmxJoint.m_rotate.z);
+		rotMat = EulerYXZ(glm::vec3(pmxJoint.m_rotate.x, pmxJoint.m_rotate.y, pmxJoint.m_rotate.z));
 
 		btTransform transform;
 		transform.setIdentity();
