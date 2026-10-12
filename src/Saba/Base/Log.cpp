@@ -6,6 +6,8 @@
 #include "Log.h"
 #include "UnicodeUtil.h"
 
+#include <spdlog/sinks/stdout_color_sinks.h>
+
 #include <iostream>
 
 #if _WIN32
@@ -24,12 +26,12 @@ namespace saba
 #endif // _WIN32
 	}
 
-	void DefaultSink::log(const spdlog::details::log_msg & msg)
+	void DefaultSink::sink_it_(const spdlog::details::log_msg & msg)
 	{
-		m_defaultLogger->log(msg.level, msg.raw.c_str());
+		m_defaultLogger->log(msg.level, msg.payload);
 	}
 
-	void DefaultSink::flush()
+	void DefaultSink::flush_()
 	{
 		m_defaultLogger->flush();
 	}

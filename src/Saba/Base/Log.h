@@ -11,16 +11,19 @@
 #include <memory>
 #include <algorithm>
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/base_sink.h>
+#include <mutex>
 #include <assert.h>
 
 namespace saba
 {
-	class DefaultSink : public spdlog::sinks::sink
+	class DefaultSink : public spdlog::sinks::base_sink<std::mutex>
 	{
 	public:
 		DefaultSink();
-		void log(const spdlog::details::log_msg& msg) override;
-		void flush() override;
+	protected:
+		void sink_it_(const spdlog::details::log_msg& msg) override;
+		void flush_() override;
 	private:
 		std::shared_ptr<spdlog::logger>	m_defaultLogger;
 	};
@@ -66,19 +69,19 @@ namespace saba
 		template <typename... Args>
 		void Info(const char* message, const Args&... args)
 		{
-			m_logger->info(message, args...);
+			m_logger->info(fmt::runtime(message), args...);
 		}
 
 		template <typename... Args>
 		void Warn(const char* message, const Args&... args)
 		{
-			m_logger->warn(message, args...);
+			m_logger->warn(fmt::runtime(message), args...);
 		}
 
 		template <typename... Args>
 		void Error(const char* message, const Args&... args)
 		{
-			m_logger->error(message, args...);
+			m_logger->error(fmt::runtime(message), args...);
 		}
 
 	private:
