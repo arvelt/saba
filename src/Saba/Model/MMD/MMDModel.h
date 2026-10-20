@@ -114,6 +114,11 @@ namespace saba
 		// 手放したワールドは、このモデルが壊れるか別のワールドへ替えるまで生きていること。自分のワールドが無ければ nullptr
 		std::unique_ptr<MMDPhysics> ReleaseOwnPhysics();
 
+		// --- 配置（PucuPucuDance の変更。P3-2a）---
+		// モデルの座標 → 共有ワールドの座標の変換。全剛体に伝え、剛体をその差分だけ動かして速度を 0 にする。既定は単位行列
+		void SetWorldFrame(const glm::mat4& frame);
+		const glm::mat4& WorldFrame() const { return m_frame; }
+
 		MMDRigidBody* AddRigidBody();
 		std::vector<RigidBodyPtr>* GetRigidBodys() { return &m_rigidBodys; }
 
@@ -125,6 +130,7 @@ namespace saba
 		std::unique_ptr<MMDPhysics>	m_mmdPhysics;
 		MMDPhysics*					m_external = nullptr;	// 借りているワールド（持ち主は別）
 		bool						m_inWorld = false;
+		glm::mat4					m_frame = glm::mat4(1);
 
 		std::vector<RigidBodyPtr>	m_rigidBodys;
 		std::vector<JointPtr>		m_joints;

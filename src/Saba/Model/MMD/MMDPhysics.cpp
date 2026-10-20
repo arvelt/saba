@@ -21,6 +21,19 @@ namespace saba
 	public:
 		virtual void Reset() = 0;
 		virtual void ReflectGlobalTransform() = 0;
+
+		// 配置（PucuPucuDance の変更。P3-2a）: モデルの座標 → 共有ワールドの座標の変換
+		void SetFrame(const glm::mat4& frame)
+		{
+			m_frame = frame;
+			m_invFrame = glm::inverse(frame);
+		}
+		// 動く剛体の姿勢を、配置の差分（Bullet の座標）だけ動かす
+		virtual void ShiftTransform(const btTransform& delta) { (void)delta; }
+
+	protected:
+		glm::mat4	m_frame = glm::mat4(1);
+		glm::mat4	m_invFrame = glm::mat4(1);
 	};
 
 	namespace
@@ -257,6 +270,11 @@ namespace saba
 		{
 		}
 
+		void ShiftTransform(const btTransform& delta) override
+		{
+			m_transform = delta * m_transform;
+			m_initialTransform = delta * m_initialTransform;
+		}
 
 	private:
 		btTransform	m_initialTransform;
@@ -287,15 +305,20 @@ namespace saba
 
 		void Reset() override
 		{
-			glm::mat4 global = InvZ(m_node->GetGlobalTransform() * m_offset);
+			glm::mat4 global = InvZ(m_frame * m_node->GetGlobalTransform() * m_offset);
 			m_transform.setFromOpenGLMatrix(&global[0][0]);
+		}
+
+		void ShiftTransform(const btTransform& delta) override
+		{
+			m_transform = delta * m_transform;
 		}
 
 		void ReflectGlobalTransform() override
 		{
 			alignas(16) glm::mat4 world;
 			m_transform.getOpenGLMatrix(&world[0][0]);
-			glm::mat4 btGlobal = InvZ(world) * m_invOffset;
+			glm::mat4 btGlobal = m_invFrame * InvZ(world) * m_invOffset;
 
 			if (m_override)
 			{
@@ -336,15 +359,20 @@ namespace saba
 
 		void Reset() override
 		{
-			glm::mat4 global = InvZ(m_node->GetGlobalTransform() * m_offset);
+			glm::mat4 global = InvZ(m_frame * m_node->GetGlobalTransform() * m_offset);
 			m_transform.setFromOpenGLMatrix(&global[0][0]);
+		}
+
+		void ShiftTransform(const btTransform& delta) override
+		{
+			m_transform = delta * m_transform;
 		}
 
 		void ReflectGlobalTransform() override
 		{
 			alignas(16) glm::mat4 world;
 			m_transform.getOpenGLMatrix(&world[0][0]);
-			glm::mat4 btGlobal = InvZ(world) * m_invOffset;
+			glm::mat4 btGlobal = m_invFrame * InvZ(world) * m_invOffset;
 			glm::mat4 global = m_node->GetGlobalTransform();
 			btGlobal[3] = global[3];
 
@@ -378,11 +406,11 @@ namespace saba
 			glm::mat4 m;
 			if (m_node != nullptr)
 			{
-				m = m_node->GetGlobalTransform() * m_offset;
+				m = m_frame * m_node->GetGlobalTransform() * m_offset;
 			}
 			else
 			{
-				m = m_offset;
+				m = m_frame * m_offset;
 			}
 			m = InvZ(m);
 			worldTransform.setFromOpenGLMatrix(&m[0][0]);
@@ -722,6 +750,30 @@ namespace saba
 		m_rigidBody->setAngularVelocity(btVector3(0, 0, 0));
 		m_rigidBody->setLinearVelocity(btVector3(0, 0, 0));
 		m_rigidBody->clearForces();
+	}
+
+	void MMDRigidBody::SetWorldFrame(const glm::mat4& frame)
+	{
+		if (frame == m_frame) { return; }	// 変わらないなら何もしない（速度も消さない）
+		const glm::mat4 delta = frame * glm::inverse(m_frame);
+		m_frame = frame;
+		if (m_activeMotionState != nullptr) { m_activeMotionState->SetFrame(frame); }
+		if (m_kinematicMotionState != nullptr) { m_kinematicMotionState->SetFrame(frame); }
+		if (m_rigidBody == nullptr) { return; }
+
+		// 剛体を差分だけ動かし、速度を 0 にする（飛ばさない）
+		alignas(16) glm::mat4 dz = InvZ(delta);
+		btTransform d;
+		d.setFromOpenGLMatrix(&dz[0][0]);
+		const btTransform t = d * m_rigidBody->getWorldTransform();
+		m_rigidBody->setWorldTransform(t);
+		m_rigidBody->setInterpolationWorldTransform(t);
+		m_rigidBody->setLinearVelocity(btVector3(0, 0, 0));
+		m_rigidBody->setAngularVelocity(btVector3(0, 0, 0));
+		m_rigidBody->setInterpolationLinearVelocity(btVector3(0, 0, 0));
+		m_rigidBody->setInterpolationAngularVelocity(btVector3(0, 0, 0));
+		m_rigidBody->clearForces();
+		if (m_activeMotionState != nullptr) { m_activeMotionState->ShiftTransform(d); }
 	}
 
 	void MMDRigidBody::ReflectGlobalTransform()

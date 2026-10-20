@@ -59,6 +59,11 @@ namespace saba
 		void ReflectGlobalTransform();
 		void CalcLocalTransform();
 
+		// モデルの座標 → 共有ワールドの座標の変換（PucuPucuDance の変更。P3-2a）。既定は単位行列で、従来と同じ動き。
+		// 変えると、剛体をその差分だけ動かし、速度を 0 にする
+		void SetWorldFrame(const glm::mat4& frame);
+		const glm::mat4& WorldFrame() const { return m_frame; }
+
 		glm::mat4 GetTransform();
 
 	private:
@@ -81,6 +86,7 @@ namespace saba
 
 		MMDNode*	m_node;
 		glm::mat4	m_offsetMat;
+		glm::mat4	m_frame = glm::mat4(1);
 
 		std::string					m_name;
 	};

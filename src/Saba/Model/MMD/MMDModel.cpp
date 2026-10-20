@@ -98,6 +98,15 @@ namespace saba
 		return std::move(m_mmdPhysics);
 	}
 
+	void MMDPhysicsManager::SetWorldFrame(const glm::mat4& frame)
+	{
+		m_frame = frame;
+		for (auto& rb : m_rigidBodys)
+		{
+			rb->SetWorldFrame(frame);
+		}
+	}
+
 	MMDRigidBody* MMDPhysicsManager::AddRigidBody()
 	{
 		SABA_ASSERT(m_mmdPhysics != nullptr);
