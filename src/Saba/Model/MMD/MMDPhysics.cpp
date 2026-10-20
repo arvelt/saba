@@ -59,12 +59,27 @@ namespace saba
 			{
 				return true;
 			}
+			if (m_blockCrossOwner)
+			{
+				const auto* obj0 = static_cast<const btCollisionObject*>(proxy0->m_clientObject);
+				const auto* obj1 = static_cast<const btCollisionObject*>(proxy1->m_clientObject);
+				if (obj0 && obj1)
+				{
+					const int owner0 = obj0->getUserIndex();
+					const int owner1 = obj1->getUserIndex();
+					if (owner0 > 0 && owner1 > 0 && owner0 != owner1)
+					{
+						return false;
+					}
+				}
+			}
 			bool collides = (proxy0->m_collisionFilterGroup & proxy1->m_collisionFilterMask) != 0;
 			collides = collides && (proxy1->m_collisionFilterGroup & proxy0->m_collisionFilterMask);
 			return collides;
 		}
 
 		std::vector<btBroadphaseProxy*> m_nonFilterProxy;
+		bool m_blockCrossOwner = false;
 	};
 
 	MMDPhysics::MMDPhysics()
@@ -194,6 +209,19 @@ namespace saba
 	btDiscreteDynamicsWorld * MMDPhysics::GetDynamicsWorld() const
 	{
 		return m_world.get();
+	}
+
+	void MMDPhysics::SetBlockCrossOwner(bool block)
+	{
+		if (m_filterCB)
+		{
+			static_cast<MMDFilterCallback*>(m_filterCB.get())->m_blockCrossOwner = block;
+		}
+	}
+
+	bool MMDPhysics::BlockCrossOwner() const
+	{
+		return m_filterCB && static_cast<MMDFilterCallback*>(m_filterCB.get())->m_blockCrossOwner;
 	}
 
 	//*******************

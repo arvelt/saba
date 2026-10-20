@@ -204,7 +204,8 @@ namespace saba
 		MMDPhysicsManager* physicsMan = GetPhysicsManager();
 		auto physics = physicsMan->GetMMDPhysics();
 
-		if (physics == nullptr)
+		// ワールドが無いか、剛体がワールドの外にあるとき（物理 off）は何もしない
+		if (physics == nullptr || !physicsMan->InWorld())
 		{
 			return;
 		}
@@ -247,7 +248,8 @@ namespace saba
 		MMDPhysicsManager* physicsMan = GetPhysicsManager();
 		auto physics = physicsMan->GetMMDPhysics();
 
-		if (physics == nullptr)
+		// ワールドが無いか、剛体がワールドの外にあるとき（物理 off）は何もしない
+		if (physics == nullptr || !physicsMan->InWorld())
 		{
 			return;
 		}

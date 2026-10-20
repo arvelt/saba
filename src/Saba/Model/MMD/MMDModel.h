@@ -97,7 +97,22 @@ namespace saba
 
 		bool Create();
 
+		// 使うワールド。UseExternalPhysics / ReleaseOwnPhysics で渡されたものがあればそれ、無ければ自分のもの
 		MMDPhysics* GetMMDPhysics();
+
+		// --- 物理ワールドの共有（PucuPucuDance の変更。P3-1a）---
+		// 剛体とジョイントがワールドに入っているか（Create の直後は入っている）
+		bool InWorld() const { return m_inWorld; }
+		// 剛体とジョイントを今のワールドから取り出す（ジョイント→剛体の順）。入っていなければ何もしない
+		void RemoveFromWorld();
+		// 剛体とジョイントを今のワールドへ入れる（剛体→ジョイントの順。読み込み時と同じ順）。ワールドが無いか入っていれば何もしない
+		void AddToWorld();
+		// 使うワールドを替える（nullptr で自分のワールドへ戻す）。剛体とジョイントは古いワールドから取り出して新しいワールドへ入れる。
+		// 渡したワールドは、このモデルが壊れるか、別のワールドへ替えるまで生きていること
+		void UseExternalPhysics(MMDPhysics* world);
+		// 自分のワールドの持ち主を呼び出し側へ移す（剛体とジョイントは入ったまま。以後 GetMMDPhysics は手放したワールドを指す）。
+		// 手放したワールドは、このモデルが壊れるか別のワールドへ替えるまで生きていること。自分のワールドが無ければ nullptr
+		std::unique_ptr<MMDPhysics> ReleaseOwnPhysics();
 
 		MMDRigidBody* AddRigidBody();
 		std::vector<RigidBodyPtr>* GetRigidBodys() { return &m_rigidBodys; }
@@ -108,6 +123,8 @@ namespace saba
 
 	private:
 		std::unique_ptr<MMDPhysics>	m_mmdPhysics;
+		MMDPhysics*					m_external = nullptr;	// 借りているワールド（持ち主は別）
+		bool						m_inWorld = false;
 
 		std::vector<RigidBodyPtr>	m_rigidBodys;
 		std::vector<JointPtr>		m_joints;

@@ -128,6 +128,11 @@ namespace saba
 
 		btDiscreteDynamicsWorld* GetDynamicsWorld() const;
 
+		// 持ち主が違う剛体どうしを衝突させない（PucuPucuDance の変更。P3-1a）。
+		// 持ち主は btCollisionObject の userIndex（1 以上）で表す。0 以下（床・フィールドなど）は持ち主なしで、制限しない
+		void SetBlockCrossOwner(bool block);
+		bool BlockCrossOwner() const;
+
 	private:
 		std::unique_ptr<btBroadphaseInterface>				m_broadphase;
 		std::unique_ptr<btDefaultCollisionConfiguration>	m_collisionConfig;

@@ -20,16 +20,8 @@ namespace saba
 
 	MMDPhysicsManager::~MMDPhysicsManager()
 	{
-		for (auto& joint : m_joints)
-		{
-			m_mmdPhysics->RemoveJoint(joint.get());
-		}
+		RemoveFromWorld();
 		m_joints.clear();
-
-		for (auto& rb : m_rigidBodys)
-		{
-			m_mmdPhysics->RemoveRigidBody(rb.get());
-		}
 		m_rigidBodys.clear();
 
 		m_mmdPhysics.reset();
@@ -38,12 +30,72 @@ namespace saba
 	bool MMDPhysicsManager::Create()
 	{
 		m_mmdPhysics = std::make_unique<MMDPhysics>();
+		m_external = nullptr;
+		m_inWorld = true;	// 読み込みが、剛体とジョイントを作った直後にこのワールドへ入れる
 		return m_mmdPhysics->Create();
 	}
 
 	MMDPhysics* MMDPhysicsManager::GetMMDPhysics()
 	{
-		return m_mmdPhysics.get();
+		return m_external ? m_external : m_mmdPhysics.get();
+	}
+
+	void MMDPhysicsManager::RemoveFromWorld()
+	{
+		MMDPhysics* world = GetMMDPhysics();
+		if (!m_inWorld || world == nullptr)
+		{
+			m_inWorld = false;
+			return;
+		}
+		for (auto& joint : m_joints)
+		{
+			world->RemoveJoint(joint.get());
+		}
+		for (auto& rb : m_rigidBodys)
+		{
+			world->RemoveRigidBody(rb.get());
+		}
+		m_inWorld = false;
+	}
+
+	void MMDPhysicsManager::AddToWorld()
+	{
+		MMDPhysics* world = GetMMDPhysics();
+		if (m_inWorld || world == nullptr)
+		{
+			return;
+		}
+		for (auto& rb : m_rigidBodys)
+		{
+			world->AddRigidBody(rb.get());
+		}
+		for (auto& joint : m_joints)
+		{
+			world->AddJoint(joint.get());
+		}
+		m_inWorld = true;
+	}
+
+	void MMDPhysicsManager::UseExternalPhysics(MMDPhysics* world)
+	{
+		if (GetMMDPhysics() == (world ? world : m_mmdPhysics.get()))
+		{
+			return;
+		}
+		RemoveFromWorld();
+		m_external = world;
+		AddToWorld();
+	}
+
+	std::unique_ptr<MMDPhysics> MMDPhysicsManager::ReleaseOwnPhysics()
+	{
+		if (m_mmdPhysics == nullptr)
+		{
+			return nullptr;
+		}
+		m_external = m_mmdPhysics.get();
+		return std::move(m_mmdPhysics);
 	}
 
 	MMDRigidBody* MMDPhysicsManager::AddRigidBody()
