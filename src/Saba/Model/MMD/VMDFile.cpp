@@ -18,6 +18,29 @@ namespace saba
 			return file.Read(val);
 		}
 
+		// 1 件あたりの直列化サイズ（バイト数）。VMDFile.h の各構造体のフィールド合計。
+		constexpr size_t kMotionRecordSize = 15 + 4 + 12 + 16 + 64;			// boneName, frame, translate, quaternion, interpolation
+		constexpr size_t kMorphRecordSize = 15 + 4 + 4;						// blendShapeName, frame, weight
+		constexpr size_t kCameraRecordSize = 4 + 4 + 12 + 12 + 24 + 4 + 1;	// frame, distance, interest, rotate, interpolation, viewAngle, isPerspective
+		constexpr size_t kLightRecordSize = 4 + 12 + 12;					// frame, color, position
+		constexpr size_t kShadowRecordSize = 4 + 1 + 4;						// frame, shadowType, distance
+		constexpr size_t kIkRecordMinSize = 4 + 1 + 4;						// frame, show, ikInfoCount（IK 情報は可変長なので最小値）
+		constexpr size_t kIkInfoRecordSize = 20 + 1;						// name, enable
+
+		// 件数をそのまま信用すると、壊れたファイルが巨大な resize を引き起こして落ちる。
+		// ファイルの残りバイト数からあり得る上限を計算し、超えていたら読み込みエラーにする。
+		bool CheckCount(uint32_t count, size_t recordSize, File& file, const char* name)
+		{
+			const File::Offset remaining = file.GetSize() - file.Tell();
+			const uint64_t maxCount = remaining > 0 ? static_cast<uint64_t>(remaining) / static_cast<uint64_t>(recordSize) : 0;
+			if (static_cast<uint64_t>(count) > maxCount)
+			{
+				SABA_WARN("VMD {} count {} exceeds the limit {} computed from the remaining file size.", name, count, maxCount);
+				return false;
+			}
+			return true;
+		}
+
 		bool ReadHeader(VMDFile* vmd, File& file)
 		{
 			Read(&vmd->m_header.m_header, file);
@@ -38,6 +61,11 @@ namespace saba
 		{
 			uint32_t motionCount = 0;
 			if (!Read(&motionCount, file))
+			{
+				return false;
+			}
+
+			if (!CheckCount(motionCount, kMotionRecordSize, file, "Motion"))
 			{
 				return false;
 			}
@@ -63,6 +91,11 @@ namespace saba
 				return false;
 			}
 
+			if (!CheckCount(blendShapeCount, kMorphRecordSize, file, "BlendShape"))
+			{
+				return false;
+			}
+
 			vmd->m_morphs.resize(blendShapeCount);
 			for (auto& morph : vmd->m_morphs)
 			{
@@ -78,6 +111,11 @@ namespace saba
 		{
 			uint32_t cameraCount = 0;
 			if (!Read(&cameraCount, file))
+			{
+				return false;
+			}
+
+			if (!CheckCount(cameraCount, kCameraRecordSize, file, "Camera"))
 			{
 				return false;
 			}
@@ -105,6 +143,11 @@ namespace saba
 				return false;
 			}
 
+			if (!CheckCount(lightCount, kLightRecordSize, file, "Light"))
+			{
+				return false;
+			}
+
 			vmd->m_lights.resize(lightCount);
 			for (auto& light : vmd->m_lights)
 			{
@@ -120,6 +163,11 @@ namespace saba
 		{
 			uint32_t shadowCount = 0;
 			if (!Read(&shadowCount, file))
+			{
+				return false;
+			}
+
+			if (!CheckCount(shadowCount, kShadowRecordSize, file, "Shadow"))
 			{
 				return false;
 			}
@@ -143,6 +191,11 @@ namespace saba
 				return false;
 			}
 
+			if (!CheckCount(ikCount, kIkRecordMinSize, file, "IK"))
+			{
+				return false;
+			}
+
 			vmd->m_iks.resize(ikCount);
 			for (auto& ik : vmd->m_iks)
 			{
@@ -150,6 +203,10 @@ namespace saba
 				Read(&ik.m_show, file);
 				uint32_t ikInfoCount = 0;
 				if (!Read(&ikInfoCount, file))
+				{
+					return false;
+				}
+				if (!CheckCount(ikInfoCount, kIkInfoRecordSize, file, "IKInfo"))
 				{
 					return false;
 				}
