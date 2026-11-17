@@ -14,8 +14,15 @@
 #include <btBulletCollisionCommon.h>
 #include <btBulletDynamicsCommon.h>
 
+#include <cmath>
+
 namespace saba
 {
+	float ConvertMMDDamping(float damping)
+	{
+		return 1.0f - std::exp(-damping);
+	}
+
 	class MMDMotionState : public btMotionState
 	{
 	public:
@@ -666,8 +673,8 @@ namespace saba
 		}
 
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, MMDMotionState, m_shape.get(), localInteria);
-		rbInfo.m_linearDamping = pmxRigidBody.m_translateDimmer;
-		rbInfo.m_angularDamping = pmxRigidBody.m_rotateDimmer;
+		rbInfo.m_linearDamping = ConvertMMDDamping(pmxRigidBody.m_translateDimmer);
+		rbInfo.m_angularDamping = ConvertMMDDamping(pmxRigidBody.m_rotateDimmer);
 		rbInfo.m_restitution = pmxRigidBody.m_repulsion;
 		rbInfo.m_friction = pmxRigidBody.m_friction;
 		rbInfo.m_additionalDamping = true;
@@ -749,6 +756,16 @@ namespace saba
 		}
 		m_rigidBody->setAngularVelocity(btVector3(0, 0, 0));
 		m_rigidBody->setLinearVelocity(btVector3(0, 0, 0));
+		m_rigidBody->clearForces();
+	}
+
+	void MMDRigidBody::ZeroVelocity()
+	{
+		if (m_rigidBody == nullptr) { return; }
+		m_rigidBody->setLinearVelocity(btVector3(0, 0, 0));
+		m_rigidBody->setAngularVelocity(btVector3(0, 0, 0));
+		m_rigidBody->setInterpolationLinearVelocity(btVector3(0, 0, 0));
+		m_rigidBody->setInterpolationAngularVelocity(btVector3(0, 0, 0));
 		m_rigidBody->clearForces();
 	}
 

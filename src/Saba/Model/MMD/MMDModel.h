@@ -118,6 +118,8 @@ namespace saba
 		// モデルの座標 → 共有ワールドの座標の変換。全剛体に伝え、剛体をその差分だけ動かして速度を 0 にする。既定は単位行列
 		void SetWorldFrame(const glm::mat4& frame);
 		const glm::mat4& WorldFrame() const { return m_frame; }
+		// 全剛体の速度（線形・角）を 0 にする（PucuPucuDance の変更。Issue #133）。位置は変えない
+		void ZeroVelocities();
 
 		MMDRigidBody* AddRigidBody();
 		std::vector<RigidBodyPtr>* GetRigidBodys() { return &m_rigidBodys; }

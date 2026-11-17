@@ -107,6 +107,14 @@ namespace saba
 		}
 	}
 
+	void MMDPhysicsManager::ZeroVelocities()
+	{
+		for (auto& rb : m_rigidBodys)
+		{
+			rb->ZeroVelocity();
+		}
+	}
+
 	MMDRigidBody* MMDPhysicsManager::AddRigidBody()
 	{
 		SABA_ASSERT(m_mmdPhysics != nullptr);

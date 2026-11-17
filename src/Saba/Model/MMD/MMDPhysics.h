@@ -34,6 +34,11 @@ namespace saba
 	class MMDModel;
 	class MMDNode;
 
+	// PMX の剛体の移動減衰・回転減衰を、Bullet の減衰の式に合わせて変換する（PucuPucuDance の変更。Issue #133）。
+	// MMD の旧式の1秒あたり速度保持率 e^(-d) を、Bullet の新式の保持率 (1 - d') に合わせる: d' = 1 - e^(-d)。
+	// PMX の生値に対して読み込み時に1回だけ呼ぶ。変換後の値を再度この関数へ渡さないこと。
+	float ConvertMMDDamping(float damping);
+
 	class MMDMotionState;
 
 	class MMDRigidBody
@@ -55,6 +60,8 @@ namespace saba
 		void SetActivation(bool activation);
 		void ResetTransform();
 		void Reset(MMDPhysics* physics);
+		// 速度（線形・角）と補間用の速度を 0 にする（PucuPucuDance の変更。Issue #133）。位置は変えない
+		void ZeroVelocity();
 
 		void ReflectGlobalTransform();
 		void CalcLocalTransform();
